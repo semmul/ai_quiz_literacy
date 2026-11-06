@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What is AI? 퀴즈 챌린지</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            deepGreen: '#2C4C3B',
+            sageGreen: '#9CAF88',
+            ivory: '#F9F6F0',
+            warmBeige: '#EBE3D5',
+            pastelYellow: '#FDFD96',
+            mint: '#A0E8AF',
+            coral: '#FF9B9B'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @font-face {
+      font-family: 'Pretendard';
+      src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff') format('woff');
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: 'Pretendard';
+      src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Bold.woff') format('woff');
+      font-weight: 700;
+    }
+
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background-color: #F9F6F0; /* ivory */
+      color: #2C4C3B; /* deepGreen */
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Animations */
+    .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shake { animation: shake 0.4s ease-in-out; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-6px); }
+    }
+
+    /* Custom Scrollbar for inner content */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #EBE3D5; border-radius: 4px; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 transition-colors duration-500">
+
+  <!-- App Container -->
+  <div id="app" class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden relative flex flex-col" style="min-height: 550px;">
+    <!-- Content will be injected here by JavaScript -->
+  </div>
+
+  <script>
+    // --- 퀴즈 데이터 설정 ---
+    const quizData = [
+      {
+        question: "천재 내비게이션? 아무리 길을 잘 찾아도 '이것'을 모르면 출발할 수 없어요!",
+        options: ["오늘 저녁 메뉴 🍲", "운전자의 MBTI 🧠", "목적지 🎯", "내비게이션 성대모사 🎙️"],
+        answerIndex: 2
+      },
+      {
+        question: "완벽한 로봇 쉐프? 모든 요리를 다 하지만, 가장 먼저 '이것'을 알려줘야 요리를 시작하죠.",
+        options: ["주방장 모자 사이즈 👨‍🍳", "먹고 싶은 메뉴 🍽️", "쉐프의 첫사랑 이름 💔", "요리 재료의 생산지 주소 🥬"],
+        answerIndex: 1
+      },
+      {
+        question: "아무리 친해도 이것만은... AI와 아무리 친해도, 이름과 전화번호 같은 '이것' 보호는 해야죠.",
+        options: ["개인정보 🔒", "넷플릭스 아이디 🎬", "와이파이 비밀번호 📶", "나의 흑역사 일기장 📓"],
+        answerIndex: 0
+      },
+      {
+        question: "투명한 짝꿍! 완성된 결과물을 자랑할 때, AI가 내 아이디어로 뭔가를 만드는 것을 도왔음을 '이것'으로 밝혀요.",
+        options: ["AI를 향한 윙크 😉", "전기세 납부 영수증 ⚡", "키보드 타건음 녹음본 ⌨️", "출처 및 AI 작업물 표시 🏷️"],
+        answerIndex: 3
+      },
+      {
+        question: "탐정 돋보기! AI가 쓴 그럴듯한 문장을 탐정처럼 눈을 크게 뜨고 반드시 거쳐야 할 과정인 '이것'은?",
+        options: ["맞춤법 검사기 무한 반복 🔄", "AI에게 칭찬 3번 하기 👏", "팩트체크 (사실확인) 🔍", "시력 검사표 읽기 👓"],
+        answerIndex: 2
+      }
+    ];
+
+    // --- 상태 관리 ---
+    let gameState = 'start'; // 'start', 'quiz', 'result', 'stats'
+    let currentQuestion = 0;
+    let score = 0;
+    let isAnimating = false;
+    let allScores = [];
+
+    const appDiv = document.getElementById('app');
+
+    // 앱 초기화 (더미 데이터 로드)
+    function init() {
+      // 로컬 스토리지에서 전체 점수 데이터 불러오기 (없으면 더미 데이터 생성)
+      const savedScores = localStorage.getItem('ai_quiz_scores');
+      if (savedScores) {
+        allScores = JSON.parse(savedScores);
+      } else {
+        // 처음 실행 시 통계 화면이 예쁘게 보이도록 가상의 참여자 25명 데이터 세팅
+        allScores = [5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,3,3,3,2,2,1,0,0];
+        localStorage.setItem('ai_quiz_scores', JSON.stringify(allScores));
+      }
+      render();
+    }
+
+    // --- 화면 렌더링 함수들 ---
+    function render() {
+      appDiv.innerHTML = ''; // 초기화
+      
+      if (gameState === 'start') renderStart();
+      else if (gameState === 'quiz') renderQuiz();
+      else if (gameState === 'result') renderResult();
+      else if (gameState === 'stats') renderStats();
+    }
+
+    // 1. 시작 화면
+    function renderStart() {
+      appDiv.innerHTML = `
+        <div class="h-full flex flex-col items-center justify-center p-8 text-center fade-in flex-1">
+          <div class="text-6xl mb-6 animate-bounce">🤖💡</div>
+          <h1 class="text-3xl font-bold mb-4 leading-tight text-deepGreen">
+            What is AI?<br/>퀴즈 챌린지
+          </h1>
+          <p class="mb-10 text-gray-600 text-sm break-keep">
+            AI와 똑똑하게 공존하는 방법!<br/>재미있는 퀴즈로 나의 AI 리터러시를 테스트해보세요.
+          </p>
+          <button onclick="startGame()" class="w-full py-4 rounded-2xl text-lg font-bold text-white shadow-lg transform transition-all hover:scale-105 active:scale-95 bg-sageGreen">
+            AI 퀴즈 도전하기 🚀
+          </button>
+        </div>
+      `;
+    }
+
+    // 2. 퀴즈 화면
+    function renderQuiz() {
+      const q = quizData[currentQuestion];
+      const progressPercent = (currentQuestion / quizData.length) * 100;
+
+      let optionsHtml = '';
+      q.options.forEach((opt, index) => {
+        optionsHtml += `
+          <button id="opt-${index}" onclick="handleAnswer(${index})" class="w-full p-4 rounded-2xl text-left font-medium border-2 border-warmBeige bg-white text-deepGreen transition-all duration-300 hover:bg-gray-50 active:scale-[0.98]">
+            <div class="flex items-center justify-between">
+              <span>${opt}</span>
+              <span id="icon-${index}"></span>
+            </div>
+          </button>
+        `;
+      });
+
+      appDiv.innerHTML = `
+        <div class="flex flex-col h-full flex-1 fade-in">
+          <!-- 프로그레스 바 -->
+          <div class="w-full h-2 bg-gray-100">
+            <div class="h-full bg-mint transition-all duration-300 ease-out rounded-r-full" style="width: ${progressPercent}%"></div>
+          </div>
+          
+          <div class="p-6 flex-1 flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+              <span class="text-sm font-semibold px-3 py-1 rounded-full bg-warmBeige text-deepGreen">
+                Question ${currentQuestion + 1} / ${quizData.length}
+              </span>
+            </div>
+
+            <h2 class="text-xl font-bold mb-8 leading-relaxed break-keep text-deepGreen">
+              ${q.question}
+            </h2>
+
+            <div class="flex flex-col gap-3 mt-auto mb-4">
+              ${optionsHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 3. 결과 화면
+    function renderResult() {
+      let emoji = '🌱';
+      if (score === 5) emoji = '👑';
+      else if (score === 4) emoji = '🎉';
+      else if (score >= 2) emoji = '👍';
+
+      let msg = "이제 막 AI와 첫인사를 나눴네요. 처음엔 누구나 낯설고 헷갈리기 마련이죠. 이번 기회에 정답을 확인하며 중요한 기본기를 챙겨가시면 됩니다.";
+      if (score === 5) msg = "인공지능과 완벽한 티키타카가 가능하시네요. 당장 AI와 안전하고 똑똑하게 협업을 시작해도 손색없어요.";
+      else if (score === 4) msg = "AI의 핵심을 아주 잘 이해하고 계시네요. 아쉽게 놓친 한 문제만 다시 확인해 보면 더 완벽해질 거예요.";
+      else if (score >= 2) msg = "좋은 시도였어요. 지금은 AI와 천천히 알아가는 단계죠. 퀴즈를 풀며 새롭게 알게 된 내용만 기억해 두셔도 충분합니다.";
+
+      appDiv.innerHTML = `
+        <div class="h-full flex flex-col items-center justify-center p-8 text-center fade-in flex-1 overflow-y-auto">
+          <div class="text-5xl mb-4">${emoji}</div>
+          <h2 class="text-xl font-bold mb-2 text-deepGreen">나의 최종 점수</h2>
+          <div class="text-5xl font-extrabold mb-6 flex items-baseline justify-center gap-2 text-sageGreen">
+            ${score} <span class="text-xl text-gray-400">/ 5</span>
+          </div>
+          
+          <div class="p-5 rounded-2xl mb-8 w-full font-medium break-keep text-sm leading-relaxed bg-pastelYellow text-deepGreen">
+            ${msg}
+          </div>
+
+          <div class="w-full flex flex-col gap-3 mt-auto">
+            <button onclick="goToStats()" class="w-full py-4 rounded-2xl text-lg font-bold shadow-md transform transition-all hover:scale-105 active:scale-95 text-white bg-deepGreen">
+              전체 참여자 통계 보기 📊
+            </button>
+            <button onclick="startGame()" class="w-full py-3 rounded-2xl text-md font-bold transition-all hover:bg-gray-100 text-deepGreen border-2 border-warmBeige">
+              다시 도전하기 🔄
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // 4. 통계 리포트 화면
+    function renderStats() {
+      // 등급 데이터 계산
+      const tierStats = [
+        { label: 'AI 마스터', scoreDesc: '5점', points: [5], count: allScores.filter(s => s === 5).length },
+        { label: '훌륭한 AI 파트너', scoreDesc: '4점', points: [4], count: allScores.filter(s => s === 4).length },
+        { label: 'AI와 친해지는 중', scoreDesc: '2~3점', points: [2, 3], count: allScores.filter(s => s === 2 || s === 3).length },
+        { label: 'AI와 첫인사', scoreDesc: '0~1점', points: [0, 1], count: allScores.filter(s => s === 0 || s === 1).length }
+      ];
+      
+      const maxTierCount = Math.max(...tierStats.map(s => s.count), 1);
+      
+      let barsHtml = '';
+      tierStats.forEach(tier => {
+        const isMyTier = tier.points.includes(score);
+        const barWidth = (tier.count / maxTierCount) * 100;
+        const widthPercent = tier.count > 0 ? Math.max(barWidth, 5) : 0; // 최소 너비 보장
+        
+        barsHtml += `
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between items-end px-1">
+              <span class="font-bold text-[15px] text-deepGreen">
+                ${tier.label} <span class="text-xs font-normal text-gray-500 ml-1">(${tier.scoreDesc})</span>
+              </span>
+              <span class="text-sm font-bold ${isMyTier ? 'text-coral' : 'text-sageGreen'}">
+                ${tier.count}명
+              </span>
+            </div>
+            <div class="w-full h-5 bg-gray-100 rounded-full overflow-hidden relative flex items-center shadow-inner">
+              <div class="h-full rounded-full transition-all duration-1000 ease-out ${isMyTier ? 'bg-mint' : 'bg-sageGreen'}" style="width: 0%;" data-width="${widthPercent}%"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      appDiv.innerHTML = `
+        <div class="h-full flex flex-col p-8 fade-in flex-1">
+          <h2 class="text-2xl font-bold mb-2 text-center text-deepGreen">결과 리포트</h2>
+          <p class="text-center text-sm text-gray-500 mb-8">
+            총 ${allScores.length}명이 퀴즈에 참여했습니다!
+          </p>
+
+          <div class="flex-1 flex flex-col justify-center gap-5 mb-8">
+            ${barsHtml}
+          </div>
+
+          <button onclick="goToResult()" class="w-full mt-auto py-4 rounded-2xl text-lg font-bold shadow-md transform transition-all hover:scale-105 active:scale-95 bg-warmBeige text-deepGreen">
+            내 점수로 돌아가기
+          </button>
+        </div>
+      `;
+
+      // 그래프 애니메이션 효과 (렌더링 직후 실행)
+      setTimeout(() => {
+        document.querySelectorAll('.rounded-full[data-width]').forEach(bar => {
+          bar.style.width = bar.getAttribute('data-width');
+        });
+      }, 50);
+    }
+
+    // --- 인터랙션 로직 ---
+    window.startGame = function() {
+      currentQuestion = 0;
+      score = 0;
+      gameState = 'quiz';
+      render();
+    }
+
+    window.handleAnswer = function(selectedIndex) {
+      if (isAnimating) return;
+      isAnimating = true;
+
+      const q = quizData[currentQuestion];
+      const isCorrect = selectedIndex === q.answerIndex;
+      
+      // 모든 버튼 스타일 초기화 및 비활성화
+      q.options.forEach((_, idx) => {
+        const btn = document.getElementById(`opt-${idx}`);
+        const icon = document.getElementById(`icon-${idx}`);
+        btn.disabled = true;
+        
+        if (idx === q.answerIndex) {
+          // 정답 표시 (초록색)
+          btn.className = "w-full p-4 rounded-2xl text-left font-medium border-2 transition-all duration-300 bg-mint border-mint text-deepGreen animate-pulse";
+          icon.textContent = '✨';
+        } else if (idx === selectedIndex && !isCorrect) {
+          // 내가 고른 오답 표시 (빨간색 & 흔들림)
+          btn.className = "w-full p-4 rounded-2xl text-left font-medium border-2 transition-all duration-300 bg-coral border-coral text-white shake";
+          icon.textContent = '💦';
+        } else {
+          // 나머지 보기 흐리게
+          btn.className = "w-full p-4 rounded-2xl text-left font-medium border-2 transition-all duration-300 bg-white border-warmBeige text-deepGreen opacity-50";
+        }
+      });
+
+      if (isCorrect) score++;
+
+      // 1.5초 후 다음 문제 또는 결과 화면으로 이동
+      setTimeout(() => {
+        isAnimating = false;
+        if (currentQuestion < quizData.length - 1) {
+          currentQuestion++;
+          render();
+        } else {
+          saveScore();
+          gameState = 'result';
+          render();
+        }
+      }, 1500);
+    }
+
+    function saveScore() {
+      // 내 점수를 전체 배열에 추가하고 로컬 스토리지에 저장 (서버 데이터베이스 흉내)
+      allScores.push(score);
+      localStorage.setItem('ai_quiz_scores', JSON.stringify(allScores));
+    }
+
+    window.goToStats = function() {
+      gameState = 'stats';
+      render();
+    }
+
+    window.goToResult = function() {
+      gameState = 'result';
+      render();
+    }
+
+    // 앱 시작
+    init();
+  </script>
+</body>
+</html>
